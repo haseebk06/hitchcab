@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class Driver extends Model
+class Hitchhiker extends Model
 {
     use HasFactory;
 
@@ -15,15 +15,13 @@ class Driver extends Model
         'gender',
         'address',
         'profile_image_url',
-        'car_image_url',
-        'car_seats',
     ];
 
-    public function rides(){
+    public function rides() {
         return $this->hasMany(Ride::class);
     }
 
-    public function ratings(){
+    public function ratings() {
         return $this->hasMany(Rating::class);
     }
 

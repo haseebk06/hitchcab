@@ -18,7 +18,7 @@ class UserController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|max:255',
             'email' => 'required|email|unique:users|max:255',
-            'phone_number' => 'required|string|unique:users|digits_between:10,15',
+            'phone_number' => 'required|string|unique:users|min:11|max:11',
         ]);
 
         if ($validator->fails()) {
@@ -86,6 +86,34 @@ class UserController extends Controller
         return response()->json([
             'status' => true,
             'data' => $request->user(),
+        ]);
+    }
+
+    public function getLoggedInUser(Request $request)
+    {
+        $user = $request->user();
+
+        if ($user->role_id === 1) {
+
+            $currentUser = User::with([
+                'driver' => function ($query) {
+                    $query->select('*');
+                }
+            ])->where('id', $user->id)
+                ->get(['id', 'phone_number', 'email']);
+        } elseif ($user->role_id === 0) {
+
+            $currentUser = User::with([
+                'hitchhiker' => function ($query) {
+                    $query->select('*');
+                }
+            ])->where('id', $user->id)
+                ->get(['id', 'phone_number', 'email']);
+        }
+
+        return response()->json([
+            'status' => true,
+            'data' => $currentUser,
         ]);
     }
 
@@ -187,7 +215,7 @@ class UserController extends Controller
     public function setPassword(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'password' => 'required|string|min:8|max:40',
+            'password' => 'required|string|min:8|max:40|regex:/^(?=.*[0-9])(?=.*[\W_]).*$/',
             'confirmPassword' => 'required|same:password',
         ]);
 
@@ -211,10 +239,50 @@ class UserController extends Controller
         ], 200);
     }
 
+    public function changePassword(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'oldPassword' => 'required|string|min:8|max:40',
+            'password' => 'required|string|min:8|max:40',
+            'confirmPassword' => 'required|same:password',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $user = $request->user();
+
+        if (!Hash::check($request->oldPassword, $user->password)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Old password is incorrect',
+            ], 422);
+        }
+
+        if (Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'status' => false,
+                'message' => 'New password cannot be the same as the old password',
+            ], 422);
+        }
+
+        $user->password = Hash::make($request->password);
+        $user->save();
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Password changed successfully',
+        ], 200);
+    }
+
     public function completeYourProfile(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'username' => 'required|string|max:224',
             'street' => 'required|string|max:224',
             'city' => 'required|string|max:224',
         ]);
@@ -242,7 +310,7 @@ class UserController extends Controller
     public function setRole(Request $request)
     {
         $user = $request->user();
-        
+
         $setRole = User::findOrFail($user->id);
         $setRole->update($request->all());
 
@@ -252,9 +320,10 @@ class UserController extends Controller
         ], 200);
     }
 
-    public function destroy($id)
+    public function destroy(Request $request)
     {
-        $user = User::findOrFail($id);
+        $user = $request->user();
+        $user->tokens()->delete();
         $user->delete();
 
         return response()->json([

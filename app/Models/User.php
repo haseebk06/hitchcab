@@ -66,4 +66,9 @@ class User extends Authenticatable
     {
         return $this->hasOne(Driver::class);
     }
+
+    public function hitchhiker()
+    {
+        return $this->hasOne(Hitchhiker::class);
+    }
 }

@@ -21,9 +21,9 @@ return new class extends Migration
             $table->decimal('destination_longitude', 9, 6);
             $table->integer('ride_time')->unsigned();
             $table->decimal('fare_price', 10, 2)->check('fare_price >= 0');
-            $table->string('payment_status', 20);
-            $table->foreignId('driver_id')->constrained()->cascadeOnDelete();
-            $table->foreignId("user_id")->constrained()->cascadeOnDelete();
+            $table->string('ride_status', 20)->nullable();
+            $table->foreignId('driver_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignId("hitchhiker_id")->nullable()->constrained()->cascadeOnDelete();
             $table->timestamps();
         });
     }

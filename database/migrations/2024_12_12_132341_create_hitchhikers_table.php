@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('drivers', function (Blueprint $table) {
+        Schema::create('hitchhikers', function (Blueprint $table) {
             $table->id();
             $table->foreignId("user_id")->constrained()->cascadeOnDelete();
             $table->string('first_name', 50);
@@ -19,8 +19,6 @@ return new class extends Migration
             $table->string('gender', 50);
             $table->text('address');
             $table->text('profile_image_url')->nullable();
-            $table->text('car_image_url')->nullable();
-            $table->integer('car_seats')->unsigned()->check('car_seats > 0');
             $table->timestamps();
         });
     }
@@ -30,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('drivers');
+        Schema::dropIfExists('hitchhikers');
     }
 };

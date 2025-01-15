@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ConfirmedRide;
 use App\Models\Driver;
 use App\Models\Hitchhiker;
 use Illuminate\Support\Facades\Validator;
@@ -74,18 +75,22 @@ class RideController extends Controller
     public function updateRide(Request $request)
     {
         $user = $request->user();
+        $ride = new ConfirmedRide();
 
-        if ($user->role_id === 1) {
-            $driver = $user->driver;
+        if ($user->role_id === 1) { //driver
 
-            $ride = $driver->rides()->latest()->first();
+            $ride->origin_address = $request['origin_address'];
+            $ride->destination_address = $request['destination_address'];
+            $ride->driver_id = $user->driver->id;
             $ride->hitchhiker_id = $request['hitchhiker_id'];
             $ride->save();
-        } elseif ($user->role_id === 0) {
-            $hitchhiker = $user->hitchhiker;
+        } elseif ($user->role_id === 0) { //hitchhiker
 
-            $ride = $hitchhiker->rides()->latest()->first();
+            // dd($request->all());
+            $ride->origin_address = $request['origin_address'];
+            $ride->destination_address = $request['destination_address'];
             $ride->driver_id = $request['driver_id'];
+            $ride->hitchhiker_id = $user->hitchhiker->id;
             $ride->save();
         }
 
@@ -100,53 +105,40 @@ class RideController extends Controller
         $user = $request->user();
 
         if ($user->role_id === 1) {  //driver
-            $hitchhikers = Hitchhiker::with(['rides' => function ($query) use ($user) {
-                $query->where('rides.driver_id', $user->driver->id);
-            }])->whereHas('rides', function ($query) use ($user) {
-                $query->where('rides.driver_id', $user->driver->id);
-            })->get();            
+            $confirmedRides = ConfirmedRide::with('hitchhiker')->where('driver_id', $user->driver->id)->get();
 
             $ridesArray = [];
 
-            foreach ($hitchhikers as $hitchhiker) {
-                foreach ($hitchhiker->rides as $ride) {
-                    $ridesArray[] = [
-                        'ride_id' => $ride->id,
-                        'context_id' => $ride->driver_id,
-                        'updated_at' => $ride->updated_at,
-                        'context_id' => $hitchhiker->id,
-                        'ride_status' => $ride->ride_status,
-                        'origin_address' => $ride->origin_address,
-                        'hitchhiker_address' => $hitchhiker->address,
-                        'destination_address' => $ride->destination_address,
-                        'profile_image_url' => $hitchhiker->profile_image_url,
-                        'full_name' => $hitchhiker->first_name . ' ' . $hitchhiker->last_name,
-                    ];
-                }
+            foreach ($confirmedRides as $ride) {
+                $ridesArray[] = [
+                    'ride_id' => $ride->id,
+                    'context_id' => $ride->hitchhiker->id,
+                    'full_name' => $ride->hitchhiker->first_name . ' ' . $ride->hitchhiker->last_name,
+                    'updated_at' => $ride->updated_at,
+                    'fare_price' => $ride->fare_price,
+                    'ride_status' => $ride->ride_status,
+                    'driver_id' => $ride->driver_id,
+                    'origin_address' => $ride->origin_address,
+                    'destination_address' => $ride->destination_address,
+                ];
             }
         } elseif ($user->role_id === 0) {  //hitchhiker
-            $drivers = Driver::with(['rides' => function ($query) use ($user) {
-                $query->where('rides.hitchhiker_id', $user->hitchhiker->id);
-            }])->whereHas('rides', function ($query) use ($user) {
-                $query->where('rides.hitchhiker_id', $user->hitchhiker->id);
-            })->get();
+            $confirmedRides = ConfirmedRide::with('driver')->where('hitchhiker_id', $user->hitchhiker->id)->get();
 
             $ridesArray = [];
 
-            foreach ($drivers as $driver) {
-                foreach ($driver->rides as $ride) {
-                    $ridesArray[] = [
-                        'ride_id' => $ride->id,
-                        'context_id' => $driver->id,
-                        'full_name' => $driver->first_name . ' ' . $driver->last_name,
-                        'updated_at' => $ride->updated_at,
-                        'fare_price' => $ride->fare_price,
-                        'ride_status' => $ride->ride_status,
-                        'hitchhiker_id' => $ride->hitchhiker_id,
-                        'origin_address' => $ride->origin_address,
-                        'destination_address' => $ride->destination_address,
-                    ];
-                }
+            foreach ($confirmedRides as $ride) {
+                $ridesArray[] = [
+                    'ride_id' => $ride->id,
+                    'context_id' => $ride->driver->id,
+                    'full_name' => $ride->driver->first_name . ' ' . $ride->driver->last_name,
+                    'updated_at' => $ride->updated_at,
+                    'fare_price' => $ride->fare_price,
+                    'ride_status' => $ride->ride_status,
+                    'hitchhiker_id' => $ride->hitchhiker_id,
+                    'origin_address' => $ride->origin_address,
+                    'destination_address' => $ride->destination_address,
+                ];
             }
         }
 

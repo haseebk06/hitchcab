@@ -170,6 +170,7 @@ class UserController extends Controller
         $otp = rand(10000, 99999);
 
         $user->verificaton_token = $otp;
+        $user->email_verified_at = null;
         $user->save();
 
         Mail::to($user->email)->send(new SendOtpMail($user));

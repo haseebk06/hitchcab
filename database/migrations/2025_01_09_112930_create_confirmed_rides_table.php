@@ -11,16 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('rides', function (Blueprint $table) {
+        Schema::create('confirmed_rides', function (Blueprint $table) {
             $table->id();
             $table->string('origin_address', 255);
             $table->string('destination_address', 255);
-            $table->decimal('origin_latitude', 9, 6);
-            $table->decimal('origin_longitude', 9, 6);
-            $table->decimal('destination_latitude', 9, 6);
-            $table->decimal('destination_longitude', 9, 6);
-            $table->integer('ride_time')->unsigned();
-            $table->decimal('fare_price', 10, 2)->check('fare_price >= 0');
+            $table->enum('ride_status', ["0", "1"])->default('0')->nullable();
             $table->foreignId('driver_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId("hitchhiker_id")->nullable()->constrained()->cascadeOnDelete();
             $table->timestamps();
@@ -32,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('rides');
+        Schema::dropIfExists('confirmed_rides');
     }
 };

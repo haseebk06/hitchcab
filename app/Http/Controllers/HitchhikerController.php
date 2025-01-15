@@ -71,15 +71,12 @@ class HitchhikerController extends Controller
 
         if ($user->role_id === 1) { //driver
             $driver = $user->driver;
-            $ride = $driver->rides()->where('hitchhiker_id', $id)->latest()->first();
+            $ride = $driver->confirmedRides()->where('hitchhiker_id', $id)->latest()->first();
 
             if ($ride) {
-                $ride->ride_status = 1;
+                $ride->ride_status = "1";
                 $ride->save();
             }
-
-            $ride->ride_status = 1;
-            $ride->save();
 
             $rating = new Rating();
             $rating->rating = $request["rating"];
@@ -89,15 +86,12 @@ class HitchhikerController extends Controller
         } elseif ($user->role_id === 0) { //hitchhiker
 
             $hitchhiker = $user->hitchhiker;
-            $ride = $hitchhiker->rides()->where('driver_id', $id)->latest()->first();
+            $ride = $hitchhiker->confirmedRides()->where('driver_id', $id)->latest()->first();
 
             if ($ride) {
-                $ride->ride_status = 1;
+                $ride->ride_status = "1";
                 $ride->save();
             }
-
-            $ride->ride_status = 1;
-            $ride->save();
 
             $rating = new Rating();
             $rating->rating = $request["rating"];

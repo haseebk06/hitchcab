@@ -24,6 +24,10 @@ class Hitchhiker extends Model
     public function ratings() {
         return $this->hasMany(Rating::class);
     }
+    
+    public function confirmedRides(){
+        return $this->hasMany(ConfirmedRide::class);
+    }
 
     public function user() {
         return $this->belongsTo(User::class);

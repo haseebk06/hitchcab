@@ -32,7 +32,7 @@ class HitchhikerController extends Controller
             'last_name' => 'required|max:50',
             'gender' => 'required|max:50',
             'address' => 'required|max:224',
-            'profile_image_url' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'profile_image_url' => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -43,10 +43,13 @@ class HitchhikerController extends Controller
             ], 422);
         }
 
-        if ($request->hasFile('profile_image_url')) {
-            $imageProfile = $request->file('profile_image_url');
-            $imagePathProfile = $imageProfile->store('uploads', 'public');
-            $profileImageUrl = asset('storage/' . $imagePathProfile);
+        $profileImageUrl = null;
+        if ($request->profile_image_url) {
+            $imageData = base64_decode($request->profile_image_url);
+            $imageName = uniqid() . '.png';
+            $imagePath = public_path('storage/uploads/' . $imageName);
+            file_put_contents($imagePath, $imageData);
+            $profileImageUrl = asset('storage/uploads/' . $imageName);
         }
 
         $hitchhiker_info = new Hitchhiker();
@@ -82,7 +85,6 @@ class HitchhikerController extends Controller
             $rating->rating = $request["rating"];
             $rating->hitchhiker_id = $id;
             $rating->save();
-
         } elseif ($user->role_id === 0) { //hitchhiker
 
             $hitchhiker = $user->hitchhiker;
@@ -97,7 +99,6 @@ class HitchhikerController extends Controller
             $rating->rating = $request["rating"];
             $rating->driver_id = $id;
             $rating->save();
-
         }
 
         return response()->json([

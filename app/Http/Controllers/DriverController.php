@@ -41,8 +41,8 @@ class DriverController extends Controller
             'gender' => 'required|max:50',
             'address' => 'required|max:224',
             'car_seats' => 'required|max:224',
-            'profile_image_url' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'car_image_url' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'profile_image_url' => 'required|string', // Validate base64 string
+            'car_image_url' => 'required|string',    // Validate base64 string
         ]);
 
         if ($validator->fails()) {
@@ -53,16 +53,24 @@ class DriverController extends Controller
             ], 422);
         }
 
-        if ($request->hasFile('profile_image_url')) {
-            $imageProfile = $request->file('profile_image_url');
-            $imagePathProfile = $imageProfile->store('uploads', 'public');
-            $profileImageUrl = asset('storage/' . $imagePathProfile);
+        $profileImageUrl = null;
+        if ($request->profile_image_url) {
+            // Decode the base64 profile image
+            $imageData = base64_decode($request->profile_image_url);
+            $imageName = uniqid() . '_profile.png';
+            $imagePath = public_path('storage/uploads/' . $imageName);
+            file_put_contents($imagePath, $imageData);
+            $profileImageUrl = asset('storage/uploads/' . $imageName);
         }
 
-        if ($request->hasFile('car_image_url')) {
-            $imageCar = $request->file('car_image_url');
-            $imagePathCar = $imageCar->store('uploads', 'public');
-            $carImageUrl = asset('storage/' . $imagePathCar);
+        $carImageUrl = null;
+        if ($request->car_image_url) {
+            // Decode the base64 car image
+            $imageData = base64_decode($request->car_image_url);
+            $imageName = uniqid() . '_car.png';
+            $imagePath = public_path('storage/uploads/' . $imageName);
+            file_put_contents($imagePath, $imageData);
+            $carImageUrl = asset('storage/uploads/' . $imageName);
         }
 
         $driver_info = new Driver();
@@ -71,9 +79,9 @@ class DriverController extends Controller
         $driver_info->last_name = $request["last_name"];
         $driver_info->gender = $request["gender"];
         $driver_info->address = $request["address"];
+        $driver_info->car_seats = $request["car_seats"];
         $driver_info->profile_image_url = $profileImageUrl;
         $driver_info->car_image_url = $carImageUrl;
-        $driver_info->car_seats = $request["car_seats"];
         $driver_info->save();
 
         return response()->json([

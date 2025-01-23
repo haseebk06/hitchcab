@@ -20,7 +20,7 @@ return new class extends Migration
             $table->decimal('destination_latitude', 9, 6);
             $table->decimal('destination_longitude', 9, 6);
             $table->integer('ride_time')->unsigned();
-            $table->decimal('fare_price', 10, 2)->check('fare_price >= 0');
+            $table->decimal('fare_price', 10, 2)->check('fare_price >= 0')->nullable();
             $table->foreignId('driver_id')->nullable()->constrained()->cascadeOnDelete();
             $table->foreignId("hitchhiker_id")->nullable()->constrained()->cascadeOnDelete();
             $table->timestamps();

@@ -244,7 +244,7 @@ class UserController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'oldPassword' => 'required|string|min:8|max:40',
-            'password' => 'required|string|min:8|max:40',
+            'password' => 'required|string|min:8|max:40|regex:/^(?=.*[0-9])(?=.*[\W_]).*$/',
             'confirmPassword' => 'required|same:password',
         ]);
 

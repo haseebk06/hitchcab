@@ -43,6 +43,8 @@ class VechicleController extends Controller
             'color' => 'required|max:224',
             'vehicle_average' => 'required|max:224',
             'license_plate_number' => 'required|unique:vehicle_information|string|regex:/^[A-Za-z]+-[0-9]+$/|max:10',
+            'license_number' => 'required|unique:license_details|min:13|max:13',
+            'issue_date' => 'required|date',
         ]);
 
         if ($validator->fails()) {

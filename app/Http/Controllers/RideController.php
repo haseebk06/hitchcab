@@ -15,7 +15,21 @@ class RideController extends Controller
     {
         $user = $request->user();
 
-        if ($user->role_id === 1) {
+        if (!$user) {
+            return response()->json(['status' => false, 'message' => 'User not found'], 404);
+        }
+
+        $vehicleInfo = $user->vehicleInformations()->select('vehicle_average')->first();
+
+        if (!$vehicleInfo) {
+            return response()->json(['status' => false, 'message' => 'Vehicle information not found'], 404);
+        }
+
+        $vehicleAverage = floatval($vehicleInfo->vehicle_average);
+
+        $fuelPricePerLiter = 256.13;
+
+        if ($user->role_id === 1) { //driver
 
             $validator = Validator::make($request->all(), [
                 'origin_address' => 'required|max:224',
@@ -24,10 +38,11 @@ class RideController extends Controller
                 'origin_longitude' => 'required|max:224',
                 'destination_latitude' => 'required|max:224',
                 'destination_longitude' => 'required|max:224',
-                'ride_time' => 'required|max:224',
+                'ride_time' => 'required|numeric|max:224',
+                'ride_distance' => 'required|numeric|max:224',
                 'fare_price' => 'required|max:224',
             ]);
-        } elseif ($user->role_id === 0) {
+        } elseif ($user->role_id === 0) { //hitchhiker
 
             $validator = Validator::make($request->all(), [
                 'origin_address' => 'required|max:224',
@@ -36,7 +51,8 @@ class RideController extends Controller
                 'origin_longitude' => 'required|max:224',
                 'destination_latitude' => 'required|max:224',
                 'destination_longitude' => 'required|max:224',
-                'ride_time' => 'required|max:224',
+                'ride_time' => 'required|numeric|max:224',
+                'ride_distance' => 'required|numeric|max:224',
             ]);
         }
 
@@ -48,15 +64,34 @@ class RideController extends Controller
             ], 422);
         }
 
+        $rideDistance = floatval($request->ride_distance);
+        $fuelRequired = $rideDistance / $vehicleAverage;
+        $fuelCost = round($fuelRequired * $fuelPricePerLiter);
+        
+        // Add 20% driver bonus to the fuel cost
+        $adjustedFuelCost = round($fuelCost * 1.20); 
+
+        if ($request->fare_price > $adjustedFuelCost) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => [
+                    'fare_price' => [
+                        "Please use average fare: (Rs $adjustedFuelCost)."
+                    ]
+                ]
+            ], 422);
+        }
+
         if ($user->role_id === 1) {
-            $rides = $request->user()->driver->rides()->create($request->all());
+            $rides = $user->driver->rides()->create($request->all());
         } elseif ($user->role_id === 0) {
-            $rides = $request->user()->hitchhiker->rides()->create($request->all());
+            $rides = $user->hitchhiker->rides()->create($request->all());
         }
 
         return response()->json([
             'status' => true,
-            'message' => 'Driver added successfully',
+            'message' => 'Ride added successfully',
             'data' => $rides,
         ], 201);
     }

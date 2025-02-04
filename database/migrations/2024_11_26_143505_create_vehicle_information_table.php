@@ -19,6 +19,8 @@ return new class extends Migration
             $table->string("color");
             $table->string("vehicle_average");
             $table->string("license_plate_number");
+            $table->string("license_number");
+            $table->date("issue_date");
             $table->timestamps();
         });
     }

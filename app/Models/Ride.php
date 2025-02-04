@@ -17,6 +17,7 @@ class Ride extends Model
         "destination_latitude",
         "destination_longitude",
         "ride_time",
+        "ride_distance",
         "fare_price",
         "ride_status",
     ];

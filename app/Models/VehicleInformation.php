@@ -15,6 +15,8 @@ class VehicleInformation extends Model
         'color',
         'vehicle_average',
         'license_plate_number',
+        'license_number',
+        'issue_date',
     ];
 
     public function user() {

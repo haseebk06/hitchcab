@@ -13,4 +13,9 @@ class Customer extends Model
         'add_cat',
         'address',
     ];
+
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class);
+    }
 }

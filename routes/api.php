@@ -12,6 +12,7 @@ use App\Http\Controllers\MenuController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\InvoiceController;
 
 
 //user
@@ -143,6 +144,14 @@ Route::prefix('/customer')->group(function () {
     Route::get('/get/{id}', [CustomerController::class, 'show']);
     Route::put('/update/{id}', [CustomerController::class, 'update'])->middleware('auth:sanctum');
     Route::delete('/delete/{id}', [CustomerController::class, 'destroy'])->middleware('auth:sanctum');
+});
+
+Route::prefix('/invoice')->group(function () {
+    Route::post('/add', [InvoiceController::class, 'store'])->middleware('auth:sanctum');
+    Route::get('/get', [InvoiceController::class, 'index']);
+    Route::get('/get/{id}', [InvoiceController::class, 'show']);
+    Route::put('/update/{id}', [InvoiceController::class, 'update'])->middleware('auth:sanctum');
+    Route::delete('/delete/{id}', [InvoiceController::class, 'destroy'])->middleware('auth:sanctum');
 });
 
 Route::prefix('/print')->group(function () {

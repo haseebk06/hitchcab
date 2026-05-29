@@ -10,12 +10,12 @@ class StoreInformationController extends Controller
 {
     public function getStoreInfo()
     {
-        $sales = StoreInformation::with('soldItems')->get();
+        $storeInformation = StoreInformation::all();
 
         return response()->json([
             'status' => true,
-            'message' => 'Stocks fetched successfully',
-            'data' => $sales,
+            'message' => 'Store Information fetched successfully',
+            'data' => $storeInformation,
         ], 201);
     }
 
@@ -27,6 +27,7 @@ class StoreInformationController extends Controller
             'phone' => 'required|max:255',
             'email' => 'unique:store_information,email|max:255',
             'currency' => 'required|max:255',
+            'sst' => 'nullable|max:255',
             'wh_tax_percentage' => 'nullable|numeric|min:0',
             'sst_withholding_tax_percentage' => 'nullable|numeric|min:0',
         ]);
@@ -53,14 +54,13 @@ class StoreInformationController extends Controller
     {
         // Validate the request data
         $validator = Validator::make($request->all(), [
-            'items' => 'sometimes|max:255',
-            'total' => 'sometimes|max:255',
-            'tax' => 'sometimes|max:255',
-            'discount' => 'sometimes|max:255',
-            'finalTotal' => 'sometimes|max:255',
-            'paymentMethod' => 'sometimes|max:255',
-            'amountReceived' => 'sometimes|max:255',
-            'changeAmount' => 'sometimes|max:255',
+            'storeName' => 'sometimes|required|max:255|unique:store_information,storeName,' . $id,
+            'address' => 'sometimes|required|max:255',
+            'phone' => 'sometimes|required|max:255',
+            'email' => 'sometimes|nullable|max:255|unique:store_information,email,' . $id,
+            'taxId' => 'sometimes|nullable|max:255',
+            'logo' => 'sometimes|nullable|max:255',
+            'currency' => 'sometimes|required|max:255',
             'sst' => 'sometimes|max:255',
             'wh_tax_percentage' => 'sometimes|nullable|numeric|min:0',
             'sst_withholding_tax_percentage' => 'sometimes|nullable|numeric|min:0',
@@ -74,39 +74,35 @@ class StoreInformationController extends Controller
             ], 422);
         }
 
-        $sale = StoreInformation::where('id', $id)
-            ->where('id', $request->id)
-            ->first();
+        $storeInfo = StoreInformation::find($id);
 
-        if (!$sale) {
+        if (!$storeInfo) {
             return response()->json([
                 'status' => false,
-                'message' => 'Stock item not found or you don\'t have permission to update it',
+                'message' => 'Store Information not found',
             ], 404);
         }
 
         // Update only the fields that were provided in the request
-        $sale->fill($request->only([
-            'items',
-            'total',
-            'tax',
-            'discount',
-            'finalTotal',
-            'paymentMethod',
-            'amountReceived',
-            'changeAmount',
+        $storeInfo->fill($request->only([
+            'storeName',
+            'address',
+            'phone',
+            'email',
+            'taxId',
+            'logo',
+            'currency',
             'sst',
             'wh_tax_percentage',
             'sst_withholding_tax_percentage'
         ]));
 
-        $sale->user_id = $request->user()->id;
-        $sale->save();
+        $storeInfo->save();
 
         return response()->json([
             'status' => true,
-            'message' => 'Stock updated successfully',
-            'data' => $sale,
+            'message' => 'Store Information updated successfully',
+            'data' => $storeInfo,
         ], 200);
     }
 }

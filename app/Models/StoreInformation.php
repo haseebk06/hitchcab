@@ -17,5 +17,8 @@ class StoreInformation extends Model
         'taxId',
         'logo',
         'currency',
+        'sst',
+        'wh_tax_percentage',
+        'sst_withholding_tax_percentage',
     ];
 }

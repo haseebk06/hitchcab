@@ -27,6 +27,8 @@ class StoreInformationController extends Controller
             'phone' => 'required|max:255',
             'email' => 'unique:store_information,email|max:255',
             'currency' => 'required|max:255',
+            'wh_tax_percentage' => 'nullable|numeric|min:0',
+            'sst_withholding_tax_percentage' => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -59,6 +61,9 @@ class StoreInformationController extends Controller
             'paymentMethod' => 'sometimes|max:255',
             'amountReceived' => 'sometimes|max:255',
             'changeAmount' => 'sometimes|max:255',
+            'sst' => 'sometimes|max:255',
+            'wh_tax_percentage' => 'sometimes|nullable|numeric|min:0',
+            'sst_withholding_tax_percentage' => 'sometimes|nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -89,7 +94,10 @@ class StoreInformationController extends Controller
             'finalTotal',
             'paymentMethod',
             'amountReceived',
-            'changeAmount'
+            'changeAmount',
+            'sst',
+            'wh_tax_percentage',
+            'sst_withholding_tax_percentage'
         ]));
 
         $sale->user_id = $request->user()->id;

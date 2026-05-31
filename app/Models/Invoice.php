@@ -18,6 +18,7 @@ class Invoice extends Model
         'size_description',
         'invoice_details',
         'weight',
+        'rate',
         'gross_amount',
         'sst_percentage',
         'sst_amount',

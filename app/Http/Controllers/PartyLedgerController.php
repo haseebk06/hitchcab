@@ -47,7 +47,7 @@ class PartyLedgerController extends Controller
 
     public function update(Request $request, $id)
     {
-        $ledger = PartyLedger::findOrFail($id);
+        $ledger = PartyLedger::with(['customer', 'poFromInvoice', 'poToInvoice'])->findOrFail($id);
 
         $validator = Validator::make($request->all(), $this->rules(true));
 
@@ -59,12 +59,15 @@ class PartyLedgerController extends Controller
             ], 422);
         }
 
-        $ledger->update($this->ledgerData(array_merge($ledger->toArray(), $validator->validated())));
+        $ledger->update($this->ledgerData(array_merge(
+            $ledger->only($ledger->getFillable()),
+            $validator->validated()
+        )));
 
         return response()->json([
             'status' => true,
             'message' => 'Party ledger updated successfully',
-            'data' => $ledger->load(['customer', 'poFromInvoice', 'poToInvoice']),
+            'data' => $ledger->refresh()->load(['customer', 'poFromInvoice', 'poToInvoice']),
         ]);
     }
 

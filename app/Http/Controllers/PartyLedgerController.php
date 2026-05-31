@@ -84,10 +84,10 @@ class PartyLedgerController extends Controller
 
     private function rules(bool $isUpdate = false): array
     {
-        $required = $isUpdate ? 'sometimes|required' : 'required';
+        $required = $isUpdate ? ['sometimes', 'required'] : ['required'];
 
         return [
-            'customer_id' => [$required, 'exists:customers,id'],
+            'customer_id' => [...$required, 'exists:customers,id'],
             'location_from' => ['nullable', 'string', 'max:255'],
             'location_to' => ['nullable', 'string', 'max:255'],
             'billing_date_from' => ['nullable', 'date'],

@@ -12,6 +12,8 @@ class Invoice extends Model
         'customer_id',
         'store_information_id',
         'po_number',
+        'lot_number',
+        'size_description',
         'invoice_details',
         'weight',
         'gross_amount',

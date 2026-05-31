@@ -94,12 +94,15 @@ class InvoiceController extends Controller
             'store_information_id' => [$required, 'exists:store_information,id'],
             'po_number' => ['nullable', 'string', 'max:255'],
             'lot_number' => ['nullable', 'string', 'max:255'],
+            'vessel' => ['nullable', 'string', 'max:255'],
+            'invoice_type' => ['nullable', 'string', 'in:Import,Export,IMPORT,EXPORT'],
             'size_description' => ['nullable', 'string'],
             'invoice_details' => ['nullable', 'string'],
             'weight' => ['nullable', 'numeric', 'min:0'],
             'gross_amount' => [$required, 'numeric', 'min:0'],
             'chq_number' => ['nullable', 'string', 'max:255'],
             'cheque_received_date' => ['nullable', 'date'],
+            'received' => ['nullable', 'numeric', 'min:0'],
             'invoice_status' => ['nullable', 'in:SBR Paid,SBR Pending,SBR declined'],
         ];
     }
@@ -119,7 +122,11 @@ class InvoiceController extends Controller
         $netAmount = round($totalAmount - $whTaxAmount, 2);
         $sstWithholdingTaxAmount = round($sstAmount * $sstWithholdingTaxPercentage / 100, 2);
         $netSstAmountSbr = round($sstAmount - $sstWithholdingTaxAmount, 2);
-        $received = round($netAmount - $sstWithholdingTaxAmount, 2);
+        $calculatedReceived = round($netAmount - $sstWithholdingTaxAmount, 2);
+        $hasChequeNumber = !empty($data['chq_number']);
+        $received = $hasChequeNumber
+            ? round((float) ($data['received'] ?? $calculatedReceived), 2)
+            : 0;
 
         return [
             'invoice_date' => $data['invoice_date'],
@@ -127,6 +134,8 @@ class InvoiceController extends Controller
             'store_information_id' => $data['store_information_id'],
             'po_number' => $data['po_number'] ?? null,
             'lot_number' => $data['lot_number'] ?? null,
+            'vessel' => $data['vessel'] ?? null,
+            'invoice_type' => $data['invoice_type'] ?? null,
             'size_description' => $data['size_description'] ?? null,
             'invoice_details' => $data['invoice_details'] ?? null,
             'weight' => $data['weight'] ?? 0,

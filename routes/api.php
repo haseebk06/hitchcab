@@ -13,6 +13,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\PartyLedgerController;
 
 
 //user
@@ -152,6 +153,14 @@ Route::prefix('/invoice')->group(function () {
     Route::get('/get/{id}', [InvoiceController::class, 'show']);
     Route::put('/update/{id}', [InvoiceController::class, 'update'])->middleware('auth:sanctum');
     Route::delete('/delete/{id}', [InvoiceController::class, 'destroy'])->middleware('auth:sanctum');
+});
+
+Route::prefix('/party-ledger')->group(function () {
+    Route::post('/add', [PartyLedgerController::class, 'store'])->middleware('auth:sanctum');
+    Route::get('/get', [PartyLedgerController::class, 'index']);
+    Route::get('/get/{id}', [PartyLedgerController::class, 'show']);
+    Route::put('/update/{id}', [PartyLedgerController::class, 'update'])->middleware('auth:sanctum');
+    Route::delete('/delete/{id}', [PartyLedgerController::class, 'destroy'])->middleware('auth:sanctum');
 });
 
 Route::prefix('/print')->group(function () {

@@ -44,4 +44,14 @@ class Invoice extends Model
     {
         return $this->belongsTo(StoreInformation::class);
     }
+
+    public function partyLedgerPoFrom()
+    {
+        return $this->hasMany(PartyLedger::class, 'po_from_invoice_id');
+    }
+
+    public function partyLedgerPoTo()
+    {
+        return $this->hasMany(PartyLedger::class, 'po_to_invoice_id');
+    }
 }

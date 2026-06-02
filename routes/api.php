@@ -68,8 +68,11 @@ Route::prefix('/order')->group(function () {
 //store Information
 Route::prefix('/store')->group(function () {
     Route::get('/get', [StoreInformationController::class, 'getStoreInfo']);
+    Route::get('/get/{id}', [StoreInformationController::class, 'show']);
     Route::post('/add', [StoreInformationController::class, 'addStoreInfo'])->middleware('auth:sanctum');
     Route::post('/update/{id}', [StoreInformationController::class, 'updateStoreInfo'])->middleware('auth:sanctum');
+    Route::put('/update/{id}', [StoreInformationController::class, 'updateStoreInfo'])->middleware('auth:sanctum');
+    Route::delete('/delete/{id}', [StoreInformationController::class, 'destroy'])->middleware('auth:sanctum');
 });
 
 //shift Information

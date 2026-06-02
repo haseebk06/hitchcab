@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Invoice;
 use App\Models\PartyLedger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -29,7 +30,17 @@ class PartyLedgerController extends Controller
             ], 422);
         }
 
-        $ledger = PartyLedger::create($this->ledgerData($validator->validated()));
+        $data = $validator->validated();
+        $poValidation = $this->validatePoRange($data);
+
+        if ($poValidation) {
+            return $poValidation;
+        }
+
+        $data['serial_number'] = $data['serial_number']
+            ?? $this->nextSerialNumber((int) $data['customer_id']);
+
+        $ledger = PartyLedger::create($this->ledgerData($data));
 
         return response()->json([
             'status' => true,
@@ -59,10 +70,17 @@ class PartyLedgerController extends Controller
             ], 422);
         }
 
-        $ledger->update($this->ledgerData(array_merge(
+        $mergedData = array_merge(
             $ledger->only($ledger->getFillable()),
             $validator->validated()
-        )));
+        );
+        $poValidation = $this->validatePoRange($mergedData);
+
+        if ($poValidation) {
+            return $poValidation;
+        }
+
+        $ledger->update($this->ledgerData($mergedData));
 
         return response()->json([
             'status' => true,
@@ -131,5 +149,52 @@ class PartyLedgerController extends Controller
             'amount' => round((float) ($data['amount'] ?? ($weight * $rate)), 2),
             'name' => $data['name'] ?? null,
         ];
+    }
+
+    private function nextSerialNumber(int $customerId): string
+    {
+        $maxSerial = PartyLedger::where('customer_id', $customerId)
+            ->selectRaw('MAX(CAST(serial_number AS UNSIGNED)) as max_serial')
+            ->value('max_serial');
+
+        return (string) (((int) $maxSerial) + 1);
+    }
+
+    private function validatePoRange(array $data)
+    {
+        if (empty($data['po_from_invoice_id']) || empty($data['po_to_invoice_id'])) {
+            return null;
+        }
+
+        $fromInvoice = Invoice::find($data['po_from_invoice_id']);
+        $toInvoice = Invoice::find($data['po_to_invoice_id']);
+
+        if (!$fromInvoice || !$toInvoice) {
+            return null;
+        }
+
+        if ((int) $fromInvoice->customer_id !== (int) $data['customer_id']
+            || (int) $toInvoice->customer_id !== (int) $data['customer_id']) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => [
+                    'po_from_invoice_id' => ['Selected PO# must belong to the selected customer.'],
+                ],
+            ], 422);
+        }
+
+        if ($fromInvoice->invoice_date && $toInvoice->invoice_date
+            && $fromInvoice->invoice_date > $toInvoice->invoice_date) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => [
+                    'po_from_invoice_id' => ['PO# From invoice date must be earlier than PO# To invoice date.'],
+                ],
+            ], 422);
+        }
+
+        return null;
     }
 }

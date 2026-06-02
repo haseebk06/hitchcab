@@ -15,6 +15,7 @@ class StoreInformation extends Model
         'phone',
         'email',
         'taxId',
+        'gst',
         'logo',
         'currency',
         'sst',

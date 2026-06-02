@@ -12,7 +12,7 @@ class PartyLedgerController extends Controller
     public function index()
     {
         $ledgers = PartyLedger::with(['customer', 'poFromInvoice', 'poToInvoice'])
-            ->latest()
+            ->orderBy('id', 'asc')
             ->get();
 
         return response()->json($ledgers);

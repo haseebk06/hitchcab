@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Invoice;
 use App\Models\StoreInformation;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 
 class InvoiceController extends Controller
@@ -28,8 +29,9 @@ class InvoiceController extends Controller
             ], 422);
         }
 
-        $data = $this->buildInvoiceData($validator->validated());
-        $data['invoice_number'] = $this->nextInvoiceNumber();
+        $validated = $validator->validated();
+        $data = $this->buildInvoiceData($validated);
+        $data['invoice_number'] = $validated['invoice_number'] ?? $this->nextInvoiceNumber();
 
         $invoice = Invoice::create($data);
 
@@ -63,6 +65,9 @@ class InvoiceController extends Controller
 
         $validated = array_merge($invoice->toArray(), $validator->validated());
         $data = $this->buildInvoiceData($validated);
+        if (array_key_exists('invoice_number', $validator->validated())) {
+            $data['invoice_number'] = $validator->validated()['invoice_number'];
+        }
 
         $invoice->update($data);
 
@@ -86,12 +91,19 @@ class InvoiceController extends Controller
 
     private function rules(bool $isUpdate = false): array
     {
-        $required = $isUpdate ? 'sometimes|required' : 'required';
+        $required = $isUpdate ? ['sometimes', 'required'] : ['required'];
+        $invoiceNumberRules = $isUpdate
+            ? ['sometimes', 'required', 'integer', 'min:1']
+            : ['nullable', 'integer', 'min:1'];
 
         return [
-            'invoice_date' => [$required, 'date'],
-            'customer_id' => [$required, 'exists:customers,id'],
-            'store_information_id' => [$required, 'exists:store_information,id'],
+            'invoice_number' => [
+                ...$invoiceNumberRules,
+                Rule::unique('invoices', 'invoice_number')->ignore(request()->route('id')),
+            ],
+            'invoice_date' => [...$required, 'date'],
+            'customer_id' => [...$required, 'exists:customers,id'],
+            'store_information_id' => [...$required, 'exists:store_information,id'],
             'po_number' => ['nullable', 'string', 'max:255'],
             'lot_number' => ['nullable', 'string', 'max:255'],
             'vessel' => ['nullable', 'string', 'max:255'],
@@ -100,7 +112,7 @@ class InvoiceController extends Controller
             'invoice_details' => ['nullable', 'string'],
             'weight' => ['nullable', 'numeric', 'min:0'],
             'rate' => ['nullable', 'numeric', 'min:0'],
-            'gross_amount' => [$required, 'numeric', 'min:0'],
+            'gross_amount' => [...$required, 'numeric', 'min:0'],
             'chq_number' => ['nullable', 'string', 'max:255'],
             'cheque_received_date' => ['nullable', 'date'],
             'received' => ['nullable', 'numeric', 'min:0'],

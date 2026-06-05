@@ -184,17 +184,6 @@ class PartyLedgerController extends Controller
             ], 422);
         }
 
-        if ($fromInvoice->invoice_date && $toInvoice->invoice_date
-            && $fromInvoice->invoice_date > $toInvoice->invoice_date) {
-            return response()->json([
-                'status' => false,
-                'message' => 'Validation error',
-                'errors' => [
-                    'po_from_invoice_id' => ['PO# From invoice date must be earlier than PO# To invoice date.'],
-                ],
-            ], 422);
-        }
-
         return null;
     }
 }

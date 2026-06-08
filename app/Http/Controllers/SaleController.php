@@ -575,18 +575,20 @@ class SaleController extends Controller
             ], 422);
         }
 
+        $roundMoney = fn ($value) => round((float) ($value ?? 0));
+
         $sale = new Sale();
         $sale->user_id = $request->user()->id;
-        $sale->total = $request["total"];
-        $sale->tax = $request["tax"];
-        $sale->gst = $request["gst"];
-        $sale->service_charges = $request["service_charges"];
+        $sale->total = $roundMoney($request["total"]);
+        $sale->tax = $roundMoney($request["tax"]);
+        $sale->gst = $roundMoney($request["gst"]);
+        $sale->service_charges = $roundMoney($request["service_charges"]);
         $sale->shift_id = $request["shift_id"];
-        $sale->discount = $request["discount"];
-        $sale->finalTotal = $request["finalTotal"];
+        $sale->discount = $roundMoney($request["discount"]);
+        $sale->finalTotal = $roundMoney($request["finalTotal"]);
         $sale->paymentMethod = $request["paymentMethod"];
-        $sale->amountReceived = $request["amountReceived"];
-        $sale->changeAmount = $request["changeAmount"];
+        $sale->amountReceived = $roundMoney($request["amountReceived"]);
+        $sale->changeAmount = $roundMoney($request["changeAmount"]);
         $sale->mode = $request["mode"];
         $sale->save();
 

@@ -17,6 +17,7 @@ class Stock extends Model
         'sellingPrice',
         'stock',
         'unit',
+        'piecesPerPack',
     ];
 
     public function user()

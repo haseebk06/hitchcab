@@ -30,6 +30,7 @@ class StockController extends Controller
             'sellingPrice' => 'required|max:255',
             'stock' => 'required|max:255',
             'unit' => 'max:255',
+            'piecesPerPack' => 'nullable|integer|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -49,6 +50,7 @@ class StockController extends Controller
         $stock->sellingPrice = $request["sellingPrice"];
         $stock->stock = $request["stock"];
         $stock->unit = $request["unit"];
+        $stock->piecesPerPack = $request["piecesPerPack"] ?? 1;
         $stock->save();
 
         return response()->json([
@@ -69,6 +71,7 @@ class StockController extends Controller
             'sellingPrice' => 'sometimes|numeric|min:0',
             'stock' => 'sometimes|integer|min:0',
             'unit' => 'sometimes|max:255',
+            'piecesPerPack' => 'sometimes|integer|min:1',
         ]);
 
         if ($validator->fails()) {
@@ -96,7 +99,8 @@ class StockController extends Controller
             'costPrice',
             'sellingPrice',
             'stock',
-            'unit'
+            'unit',
+            'piecesPerPack'
         ]));
 
         $stock->user_id = $request->user()->id;

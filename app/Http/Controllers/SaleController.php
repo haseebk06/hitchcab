@@ -333,59 +333,132 @@ class SaleController extends Controller
     
     public function addReturns(Request $request)
     {
+        $validator = Validator::make($request->all(), [
+            'sale_id' => 'required|exists:sales,id',
+            'shift_id' => 'required|exists:shifts,id',
+            'reason' => 'required|string|max:255',
+            'items' => 'required|array|min:1',
+            'items.*.quantity' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => false,
+                'message' => 'Validation error',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
         DB::beginTransaction();
         try {
+            $originalSale = Sale::with(['soldItems' => function ($query) {
+                $query->where('is_return', false);
+            }])->findOrFail($request->sale_id);
+
+            if ($originalSale->is_return || $originalSale->status === 'returned') {
+                throw new \Exception('This sale has already been fully returned');
+            }
+
+            $returnLines = [];
+            $returnTotal = 0;
+
+            foreach ($request->items as $item) {
+                $soldItem = null;
+
+                if (!empty($item['sold_item_id'])) {
+                    $soldItem = $originalSale->soldItems->firstWhere('id', (int) $item['sold_item_id']);
+                }
+
+                if (!$soldItem) {
+                    $soldItem = $originalSale->soldItems
+                        ->where('name', $item['name'] ?? null)
+                        ->when(!empty($item['barcode']), function ($items) use ($item) {
+                            return $items->where('barcode', $item['barcode']);
+                        })
+                        ->first();
+                }
+
+                if (!$soldItem) {
+                    throw new \Exception('Return item was not found in the original sale');
+                }
+
+                $returnQuantity = (int) $item['quantity'];
+
+                if ($returnQuantity > (int) $soldItem->quantity) {
+                    throw new \Exception("Return quantity cannot exceed sold quantity for {$soldItem->name}");
+                }
+
+                $subtotal = round((float) $soldItem->sellingPrice * $returnQuantity, 2);
+                $returnTotal += $subtotal;
+
+                $returnLines[] = [
+                    'sold_item' => $soldItem,
+                    'quantity' => $returnQuantity,
+                    'subtotal' => $subtotal,
+                ];
+            }
+
+            $originalTotal = max((float) $originalSale->total, 0);
+            $returnRatio = $originalTotal > 0 ? min($returnTotal / $originalTotal, 1) : 0;
+            $returnTax = round((float) $originalSale->tax * $returnRatio, 2);
+            $returnGst = round((float) $originalSale->gst * $returnRatio, 2);
+            $returnServiceCharges = round((float) $originalSale->service_charges * $returnRatio, 2);
+            $returnDiscount = round(min((float) $originalSale->discount * $returnRatio, $returnTotal), 2);
+            $calculatedFinalTotal = $returnTotal + $returnTax + $returnGst + $returnServiceCharges - $returnDiscount;
+            $returnFinalTotal = round(max(0, (float) $originalSale->finalTotal > 0
+                ? (float) $originalSale->finalTotal * $returnRatio
+                : $calculatedFinalTotal
+            ), 2);
+
             // Create the return record
             $return = new Retrun();
             $return->user_id = $request->user()->id;
-            $return->sale_id = $request->sale_id;
-            $return->total = $request->total;
-            $return->tax = $request->tax;
-            $return->gst = $request->gst;
-            $return->service_charges = $request->service_charges;
+            $return->sale_id = $originalSale->id;
+            $return->total = $returnTotal;
+            $return->tax = $returnTax;
+            $return->gst = $returnGst;
+            $return->service_charges = $returnServiceCharges;
             $return->shift_id = $request->shift_id;
-            $return->discount = $request->discount;
-            $return->finalTotal = $request->finalTotal;
-            $return->paymentMethod = $request->paymentMethod;
-            $return->amountReceived = $request->amountReceived;
-            $return->changeAmount = $request->changeAmount;
+            $return->discount = $returnDiscount;
+            $return->finalTotal = $returnFinalTotal;
+            $return->paymentMethod = $originalSale->paymentMethod;
+            $return->amountReceived = $returnFinalTotal;
+            $return->changeAmount = 0;
             $return->reason = $request->reason;
             $return->save();
     
             // Save return items and update original sold items
             $savedItems = [];
-            foreach ($request->items as $item) {
+            foreach ($returnLines as $line) {
+                $soldItem = $line['sold_item'];
+
                 // Create return item record
                 $returnItem = new RetrunItem();
                 $returnItem->return_id = $return->id;
-                $returnItem->name = $item['name'];
-                $returnItem->quantity = $item['quantity'];
-                $returnItem->barcode = $item['barcode'] ?? null;
-                $returnItem->category = $item['category'] ?? null;
-                $returnItem->costPrice = $item['costPrice'];
-                $returnItem->sellingPrice = $item['sellingPrice'];
-                $returnItem->stock = $item['stock'];
-                $returnItem->subtotal = $item['subtotal'];
-                $returnItem->unit = $item['unit'] ?? null;
+                $returnItem->name = $soldItem->name;
+                $returnItem->quantity = $line['quantity'];
+                $returnItem->barcode = $soldItem->barcode;
+                $returnItem->category = $soldItem->category;
+                $returnItem->costPrice = $soldItem->costPrice;
+                $returnItem->sellingPrice = $soldItem->sellingPrice;
+                $returnItem->stock = $soldItem->stock;
+                $returnItem->subtotal = $line['subtotal'];
+                $returnItem->unit = $soldItem->unit;
                 $returnItem->save();
     
                 $savedItems[] = $returnItem;
     
-                // Update the original sold item's is_return status
-                $this->updateSoldItemReturnStatus($request->sale_id, $item['name'], $item['quantity']);
+                $this->updateSoldItemReturnStatus($soldItem, $line['quantity'], $request->reason);
+                $this->restoreStock($soldItem->barcode, $line['quantity']);
             }
     
             // Update the original sale status based on return type
-            $originalSale = Sale::find($request->sale_id);
-            if ($originalSale) {
-                // Check if this is a full return (all items returned)
-                $isFullReturn = $this->isFullReturn($request->sale_id, $request->items);
-                
-                if ($isFullReturn) {
-                    $originalSale->status = 'returned';
-                } else {
-                    $originalSale->status = 'partially_returned';
-                }
+            $originalSale->refresh();
+            $isFullReturn = $this->isFullReturn($originalSale->id);
+
+            if ($isFullReturn) {
+                $originalSale->status = 'returned';
+                $originalSale->return_reason = $request->reason;
                 $originalSale->save();
             }
     
@@ -411,30 +484,36 @@ class SaleController extends Controller
     }
     
     // Helper method to update sold item's return status
-    private function updateSoldItemReturnStatus($saleId, $itemName, $returnedQuantity)
+    private function updateSoldItemReturnStatus(SoldItems $soldItem, int $returnedQuantity, string $reason)
     {
-        // Find the original sold item
-        $soldItem = SoldItems::where('sale_id', $saleId)
-                            ->where('name', $itemName)
-                            ->first();
-    
-        if ($soldItem) {
-            if ($returnedQuantity >= $soldItem->quantity) {
-                // Mark as fully returned
-                $soldItem->is_return = 1;
-                $soldItem->return_reason = 'Fully returned';
-            } else {
-                // For partial returns, reduce the quantity
-                $soldItem->quantity -= $returnedQuantity;
-                $soldItem->subtotal = $soldItem->sellingPrice * $soldItem->quantity;
-                $soldItem->is_return = 0; // Not fully returned
-                $soldItem->return_reason = 'Partially returned: ' . $returnedQuantity . ' items returned';
-            }
-            $soldItem->save();
+        if ($returnedQuantity >= (int) $soldItem->quantity) {
+            $soldItem->is_return = 1;
+            $soldItem->return_reason = $reason;
+        } else {
+            $soldItem->quantity -= $returnedQuantity;
+            $soldItem->subtotal = round((float) $soldItem->sellingPrice * (int) $soldItem->quantity, 2);
+            $soldItem->is_return = 0;
+            $soldItem->return_reason = 'Partially returned: ' . $returnedQuantity . ' item(s). ' . $reason;
+        }
+
+        $soldItem->save();
+    }
+
+    private function restoreStock(?string $barcode, int $quantity)
+    {
+        if (!$barcode) {
+            return;
+        }
+
+        $stock = Stock::where('barcode', $barcode)->first();
+
+        if ($stock) {
+            $stock->stock = (int) $stock->stock + $quantity;
+            $stock->save();
         }
     }
 
-    private function isFullReturn($saleId, $returnItems)
+    private function isFullReturn($saleId)
     {
         // Get all non-returned items from the original sale
         $originalItems = SoldItems::where('sale_id', $saleId)

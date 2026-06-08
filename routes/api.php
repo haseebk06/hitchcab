@@ -12,8 +12,10 @@ use App\Http\Controllers\MenuController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ServerController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\DoctorController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\PartyLedgerController;
+use App\Http\Controllers\PatientController;
 
 
 //user
@@ -148,6 +150,22 @@ Route::prefix('/customer')->group(function () {
     Route::get('/get/{id}', [CustomerController::class, 'show']);
     Route::put('/update/{id}', [CustomerController::class, 'update'])->middleware('auth:sanctum');
     Route::delete('/delete/{id}', [CustomerController::class, 'destroy'])->middleware('auth:sanctum');
+});
+
+Route::prefix('/doctor')->group(function () {
+    Route::post('/add', [DoctorController::class, 'store'])->middleware('auth:sanctum');
+    Route::get('/get', [DoctorController::class, 'index']);
+    Route::get('/get/{id}', [DoctorController::class, 'show']);
+    Route::put('/update/{id}', [DoctorController::class, 'update'])->middleware('auth:sanctum');
+    Route::delete('/delete/{id}', [DoctorController::class, 'destroy'])->middleware('auth:sanctum');
+});
+
+Route::prefix('/patient')->group(function () {
+    Route::post('/add', [PatientController::class, 'store'])->middleware('auth:sanctum');
+    Route::get('/get', [PatientController::class, 'index']);
+    Route::get('/get/{id}', [PatientController::class, 'show']);
+    Route::put('/update/{id}', [PatientController::class, 'update'])->middleware('auth:sanctum');
+    Route::delete('/delete/{id}', [PatientController::class, 'destroy'])->middleware('auth:sanctum');
 });
 
 Route::prefix('/invoice')->group(function () {

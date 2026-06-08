@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Counter;
 use App\Models\Shift;
 use App\Models\DailyReport;
+use App\Models\Retrun;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Artisan;
@@ -204,6 +205,80 @@ class ShiftController extends Controller
         ]);
 
         return response()->json($counter);
+    }
+
+    public function todayCounterReport($id)
+    {
+        $counter = Counter::find($id);
+
+        if (!$counter) {
+            return response()->json(['message' => 'Counter not found.'], 404);
+        }
+
+        $shifts = Shift::with([
+            'user',
+            'sales.soldItems',
+            'returns.retrunItems',
+        ])
+            ->where('counter_id', $counter->id)
+            ->whereDate('start_time', today())
+            ->orderBy('start_time')
+            ->get();
+
+        $reportShifts = $shifts->map(function ($shift, $index) {
+            $itemRows = [];
+
+            foreach ($shift->sales as $sale) {
+                foreach ($sale->soldItems as $item) {
+                    $key = $item->name;
+
+                    if (!isset($itemRows[$key])) {
+                        $itemRows[$key] = [
+                            'name' => $item->name,
+                            'quantity' => 0,
+                            'amount' => 0,
+                        ];
+                    }
+
+                    $itemRows[$key]['quantity'] += (int) $item->quantity;
+                    $itemRows[$key]['amount'] += round((float) $item->subtotal);
+                }
+            }
+
+            $returns = $shift->returns;
+
+            return [
+                'id' => $shift->id,
+                'name' => 'Shift ' . ($index + 1),
+                'cashier_name' => $shift->user->name ?? 'Unknown',
+                'start_time' => $shift->start_time,
+                'end_time' => $shift->end_time,
+                'opening_cash' => round((float) $shift->opening_cash),
+                'closing_cash' => round((float) $shift->closing_cash),
+                'sales_total' => round((float) $shift->sales->sum('finalTotal')),
+                'gross_total' => round((float) $shift->sales->sum('total')),
+                'discount_total' => round((float) $shift->sales->sum('discount')),
+                'gst_total' => round((float) $shift->sales->sum('gst')),
+                'returns_total' => round((float) $returns->sum('finalTotal')),
+                'net_total' => round((float) $shift->sales->sum('finalTotal') - (float) $returns->sum('finalTotal')),
+                'items' => array_values($itemRows),
+            ];
+        })->values();
+
+        return response()->json([
+            'status' => true,
+            'counter' => $counter,
+            'date' => today()->toDateString(),
+            'shifts' => $reportShifts,
+            'totals' => [
+                'sales_total' => $reportShifts->sum('sales_total'),
+                'gross_total' => $reportShifts->sum('gross_total'),
+                'discount_total' => $reportShifts->sum('discount_total'),
+                'gst_total' => $reportShifts->sum('gst_total'),
+                'returns_total' => $reportShifts->sum('returns_total'),
+                'net_total' => $reportShifts->sum('net_total'),
+            ],
+        ]);
     }
     
     public function generateReportManually()

@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('patients', function (Blueprint $table) {
             $table->id();
             $table->string('patient_code')->unique();
+            $table->unsignedInteger('token_number')->nullable();
             $table->foreignId('doctor_id')->constrained('doctors')->restrictOnDelete();
             $table->string('name');
             $table->string('guardian_name')->nullable();

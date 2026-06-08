@@ -8,6 +8,7 @@ class Patient extends Model
 {
     protected $fillable = [
         'patient_code',
+        'token_number',
         'doctor_id',
         'name',
         'guardian_name',
@@ -43,6 +44,7 @@ class Patient extends Model
         return [
             'date_of_birth' => 'date',
             'age' => 'integer',
+            'token_number' => 'integer',
         ];
     }
 

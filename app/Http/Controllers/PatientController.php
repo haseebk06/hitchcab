@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Patient;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class PatientController extends Controller
@@ -19,11 +20,14 @@ class PatientController extends Controller
     {
         $validated = $request->validate($this->rules());
 
-        $validated['patient_code'] = $validated['patient_code'] ?? $this->nextPatientCode();
-        $validated['created_by'] = $request->user()?->id;
-        $validated['updated_by'] = $request->user()?->id;
+        $patient = DB::transaction(function () use ($request, $validated) {
+            $validated['patient_code'] = $validated['patient_code'] ?? $this->nextPatientCode();
+            $validated['token_number'] = $this->nextTokenNumber();
+            $validated['created_by'] = $request->user()?->id;
+            $validated['updated_by'] = $request->user()?->id;
 
-        $patient = Patient::create($validated);
+            return Patient::create($validated);
+        });
 
         return response()->json([
             'message' => 'Patient created successfully',
@@ -60,6 +64,22 @@ class PatientController extends Controller
 
         return response()->json([
             'message' => 'Patient deleted successfully',
+        ]);
+    }
+
+    public function resetTokenCounter()
+    {
+        DB::table('patient_token_counters')->updateOrInsert(
+            ['id' => 1],
+            [
+                'current_token' => 0,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Patient token counter reset successfully',
         ]);
     }
 
@@ -124,5 +144,37 @@ class PatientController extends Controller
             : 0;
 
         return 'PAT-' . str_pad((string) ($lastNumber + 1), 4, '0', STR_PAD_LEFT);
+    }
+
+    private function nextTokenNumber(): int
+    {
+        $counter = DB::table('patient_token_counters')
+            ->where('id', 1)
+            ->lockForUpdate()
+            ->first();
+
+        if (! $counter) {
+            DB::table('patient_token_counters')->insert([
+                'id' => 1,
+                'current_token' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $currentToken = 0;
+        } else {
+            $currentToken = (int) $counter->current_token;
+        }
+
+        $nextToken = $currentToken + 1;
+
+        DB::table('patient_token_counters')
+            ->where('id', 1)
+            ->update([
+                'current_token' => $nextToken,
+                'updated_at' => now(),
+            ]);
+
+        return $nextToken;
     }
 }

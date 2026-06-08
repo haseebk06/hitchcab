@@ -166,6 +166,7 @@ Route::prefix('/patient')->group(function () {
     Route::get('/get/{id}', [PatientController::class, 'show']);
     Route::put('/update/{id}', [PatientController::class, 'update'])->middleware('auth:sanctum');
     Route::delete('/delete/{id}', [PatientController::class, 'destroy'])->middleware('auth:sanctum');
+    Route::post('/token/reset', [PatientController::class, 'resetTokenCounter'])->middleware('auth:sanctum');
 });
 
 Route::prefix('/invoice')->group(function () {

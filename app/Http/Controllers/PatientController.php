@@ -10,7 +10,7 @@ class PatientController extends Controller
 {
     public function index()
     {
-        $patients = Patient::with(['creator', 'updater'])->latest()->get();
+        $patients = Patient::with(['doctor', 'creator', 'updater'])->latest()->get();
 
         return response()->json($patients);
     }
@@ -27,13 +27,13 @@ class PatientController extends Controller
 
         return response()->json([
             'message' => 'Patient created successfully',
-            'data' => $patient->load(['creator', 'updater']),
+            'data' => $patient->load(['doctor', 'creator', 'updater']),
         ], 201);
     }
 
     public function show($id)
     {
-        $patient = Patient::with(['creator', 'updater'])->findOrFail($id);
+        $patient = Patient::with(['doctor', 'creator', 'updater'])->findOrFail($id);
 
         return response()->json($patient);
     }
@@ -49,7 +49,7 @@ class PatientController extends Controller
 
         return response()->json([
             'message' => 'Patient updated successfully',
-            'data' => $patient->refresh()->load(['creator', 'updater']),
+            'data' => $patient->refresh()->load(['doctor', 'creator', 'updater']),
         ]);
     }
 
@@ -74,8 +74,9 @@ class PatientController extends Controller
                 'max:255',
                 Rule::unique('patients', 'patient_code')->ignore($patientId),
             ],
+            'doctor_id' => [...$required, 'exists:doctors,id'],
             'name' => [...$required, 'string', 'max:255'],
-            'phone' => [...$required, 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:255'],
             'guardian_name' => ['nullable', 'string', 'max:255'],
             'gender' => ['nullable', Rule::in(['male', 'female', 'other'])],
             'date_of_birth' => ['nullable', 'date'],

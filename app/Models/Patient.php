@@ -8,6 +8,7 @@ class Patient extends Model
 {
     protected $fillable = [
         'patient_code',
+        'doctor_id',
         'name',
         'guardian_name',
         'gender',
@@ -48,6 +49,11 @@ class Patient extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function doctor()
+    {
+        return $this->belongsTo(Doctor::class);
     }
 
     public function updater()

@@ -14,13 +14,14 @@ return new class extends Migration
         Schema::create('patients', function (Blueprint $table) {
             $table->id();
             $table->string('patient_code')->unique();
+            $table->foreignId('doctor_id')->constrained('doctors')->restrictOnDelete();
             $table->string('name');
             $table->string('guardian_name')->nullable();
             $table->enum('gender', ['male', 'female', 'other'])->nullable();
             $table->date('date_of_birth')->nullable();
             $table->unsignedTinyInteger('age')->nullable();
             $table->string('cnic')->nullable()->unique();
-            $table->string('phone');
+            $table->string('phone')->nullable();
             $table->string('alternate_phone')->nullable();
             $table->string('email')->nullable()->unique();
             $table->text('address')->nullable();
